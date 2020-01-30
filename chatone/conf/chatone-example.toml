@@ -1,0 +1,15 @@
+[rpcServer]
+    addr = ":3109"
+    timeout = "1s"
+
+[mysql]
+    host = "127.0.0.1"
+    port = 3306
+    dbuser = "root"
+    dbpwd = "123456"
+    database = "bubble"
+    table = "chatonemsg"
+
+[xlog]
+    path = "gbiz.log"
+    level = "debug"
