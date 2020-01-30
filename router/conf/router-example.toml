@@ -1,0 +1,11 @@
+[rpcServer]
+    addr = ":3109"
+    timeout = "1s"
+
+[rpcClient]
+    dial = "1s"
+    timeout = "1s"
+
+[xlog]
+    path = "gbiz.log"
+    level = "debug"
