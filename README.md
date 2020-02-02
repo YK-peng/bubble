@@ -39,7 +39,9 @@ bubble is a im server writen by golang.
     - 服务之间使用gRpc+ProtocolBuffers
  
  * Auth协议
+ 
     ![auth](./docs/auth.gif)
+    
     RSA解密速度比AES慢,但AES在网络中直使用不安全.采用RSA+AES+ECDH结合方式.RSA用于加密关键数据。ecdh用于客户端与服务端安全协商出对称秘钥（clientEcdh公钥不可直接暴露,存在中间人攻击）
     * 发送方(client)：
     1. 随机生成AES密钥cliRandomEncryKey，并用cliRandomEncryKey加密others(非关键数据)，再用RSA pubKey加密cliRandomEncryKey、token、cliPubEcdhkey. 一齐发送给接收方
