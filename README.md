@@ -37,8 +37,9 @@ bubble is a im server writen by golang.
  * 协议格式
     - 与客户端交互数据包格式,使用二进制头+ProtocolBuffers
     
-    ![protocol](./docs/protocol.gif)
-    header长度没写死，留了header length字段，方便以后头部扩展
+         ![protocol](./docs/protocol.gif)
+        
+     注：header长度没写死，留了header length字段，方便以后头部扩展
     
     - 服务之间使用gRpc+ProtocolBuffers
  
@@ -82,7 +83,6 @@ bubble is a im server writen by golang.
  * msg存储
     - 单聊和普通群聊使用扩散写,支持消息离线同步
     ![table](./docs/table.gif)
-
         - direct：方向,1:qID->pID, -1:qID<-pID。所以相对于qID，1表示qID所发消息，-1表示qID所收消息
         - status：1时表示已读
     
