@@ -63,14 +63,51 @@ bubble is a im server writen by golang.
  
  * msg存储
     - 单聊和普通群聊使用扩散写,支持消息离线同步
+    
+    ![table](./docs/table.gif)
+        - direct：方向,1:qID->pID, -1:qID<-pID。所以相对于qID，1表示qID所发消息，-1表示qID所收消息
+        - status：1时表示已读
+    上图示例：
+    A发送"Hello"给B，A发送"大家好"给到Room(A、B、C)。
+    B获取自己的未读消息(收件箱中未读邮件)：select * from *msgTable* where direct=-1 and qID=B and status=0
+    B获取自己的所有消息(收件箱+发件箱)：select * from *msgTable* where qID=B
+    
     - 超大群使用读扩散,不支持离线消息同步
     - 最近消息缓存到Redis
     - 双写到MySQL和ES,ES提供聊天记录搜索
  
  * msg协议
- 
- * 在线状态服务online
+    * msg投递(单聊和普通群组)
+        - 投递消息和邮件类似，将消息投递到每个人的收件箱中，每投递一个消息增加一个版本号(每个用户各有自己的一个独立的version space，版本号在space内趋势递增)。
+    
+    * msg离线获取
+        - 用户上线后，主动拉取离线消息。拉取是根据版本号增量同步。
+    
+    * msg多端同步
+        1. 服务端直接推送给客户端。
+        2. 服务器通知客户端来拉取。拉取是根据版本号增量同步。
+        3. 结合1和2
+      
+      第二种方式需要更多网络请求，但是更稳，因为第一种方式如果服务端推送的消息版本号与客户端上最新的版本号之间有差异，即漏掉了消息。考虑优化可结合使用1和2，1方式中服务端推送中带上服务端所认为的客户端上最大版本号，客户端将其与本地最大版本号对比后，知道有漏后，再主动去补漏。(另外如果你的设计是业务大部分走HTTP，长连接只是用来接收服务端通知的话，可倾向于第二种方式)
 
+    * msg去重
+        - 客户端对每个msg生成唯一标识符clientMsgId(每个用户一个space)。服务端利用这个标识去重(在最近的一定时间范围内)。(服务端自身无法判断重复发送的msg，需要客户端给出标识。例如服务端接收到连续的两次内容为"hello"的msg，服务端无法判断是用户操作发送的两次相同内容的消息，还是由于客户端超时重试的原因)(客户端不能直接使用时间戳，单用户多个客户端登录，时间不能保证一致的)
+    
+    * msg发送顺序还原(实际不一定需要，看产品要求)
+        - 服务端接收到msg的顺序并不能表明发送者的发送顺序，用户先发送msgA后不等待服务端确认，继续发送msgB，可能msgB先到达服务器。客户端对每个msg生成clientMsgSeq(每个会话一个space)。消息接收者接收到消息后，可根据这个字段还原发送者的发送顺序，但是考虑到用户换手机或重装应用，这个clientMsgSeq不是应该本地持久化的，况且msgA后发msgB，由于网络延时的原因，msgB先到服务端，clientMsgSeq并不需要很长的有效期。所有，最终更可靠的方式：先使用消息发送者在同一台设备上的消息createTime排序，createTime相同时，再使用clientMsgSeq排序。多设备同时发送消息，则只能使用serverMsgSeq，因为多个设备上的time无法确保相同。
+
+    * serverMsgId(全局space内msg唯一标识)
+        - serverMsgId = hash(sender, receiver, 该会话space内消息唯一标识)
+    
+    * serverMsgSeq(用户space)
+        - 每个用户一个space，在该space内趋势递增。相当于版本号，客户端拉取消息时，传递本地此字段的最大值到服务端，增量同步。
+    
+    * 用户量小的情况下,clientMsgId和clientMsgSeq可以合并到一个字段，serverMsgId和serverMsgSeq也可以合并到一个字段。(即一个字段同时表征出唯一性和顺序性)。space可以考虑直接全局，减少复杂度。参考分布式唯一ID生成方法。
+    
+    * 大资源先上传到CDN，消息content为CDN相关详细，接受者接收到该信息后可去CDN下载。短语音可考虑直接放进content，长语音走CDN。
+    
+    * 格式复杂且多变的msg，可考虑使用XML格式化到content。
+    
 ## Dependencies
  * MySQL
  * Redis
