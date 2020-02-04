@@ -27,7 +27,7 @@ bubble is a im server writen by golang.
     - push:系统消息推送
     - hub:大群聊天
     - search:聊天记录搜索
-    - online:用户在线状态和路由(简单情况下,可考虑直接使用Redis)
+    - online:用户在线状态和路由,简单情况下,可考虑直接使用Redis(本项目暂使用redis替代)
 * 存储层：消息存储
     - redis:缓存
     - MySQL:持久化
@@ -36,7 +36,25 @@ bubble is a im server writen by golang.
 ## 关键设计
  * 协议格式
     - 与客户端交互数据包格式,使用二进制头+ProtocolBuffers
+    
+    ![protocol](./docs/protocol.gif)
+    header长度没写死，留了header length字段，方便以后头部扩展
+    
     - 服务之间使用gRpc+ProtocolBuffers
+ 
+ * Auth流程
+ 
+    ![auth-flow-in-server](./docs/auth-flow-in-server.png)
+    
+    1. 客户端通过统一登录系统验证登录密码等。
+    2. SSO验证客户端用户名密码之后，生成登录token并返回给客户端。
+    3. 客户端使用UID和返回的token向gate发起授权验证请求。
+    4. gate同步调用logic server的验证接口。
+    5. Auth Server请求SSO系统验证token合法性。
+        - SSO系统返回验证token结果。
+        - 如果验证成功，auth系统在redis中存储客户端的路由信息，即客户端在哪个gate上登录。
+    6. auth系统向gate返回验证登录结果。
+    7. gate向客户端返回授权结果。
  
  * Auth协议
  
@@ -63,14 +81,15 @@ bubble is a im server writen by golang.
  
  * msg存储
     - 单聊和普通群聊使用扩散写,支持消息离线同步
-    
     ![table](./docs/table.gif)
+
         - direct：方向,1:qID->pID, -1:qID<-pID。所以相对于qID，1表示qID所发消息，-1表示qID所收消息
         - status：1时表示已读
-    上图示例：
-    A发送"Hello"给B，A发送"大家好"给到Room(A、B、C)。
-    B获取自己的未读消息(收件箱中未读邮件)：select * from *msgTable* where direct=-1 and qID=B and status=0
-    B获取自己的所有消息(收件箱+发件箱)：select * from *msgTable* where qID=B
+    
+        上图示例：
+        - A发送"Hello"给B，A发送"大家好"给到Room(A、B、C)。
+        - B获取自己的未读消息(收件箱中未读邮件)：select * from *msgTable* where direct=-1 and qID=B and status=0
+        - B获取自己的所有消息(收件箱+发件箱)：select * from *msgTable* where qID=B
     
     - 超大群使用读扩散,不支持离线消息同步
     - 最近消息缓存到Redis
