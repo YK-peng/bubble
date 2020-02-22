@@ -1,0 +1,26 @@
+syntax = "proto3";
+
+package bubble.gate;
+option go_package = "grpc";
+
+//多播
+message PushMsgReq {
+    repeated string keys = 1;
+    int32 op = 2;
+    bytes body = 3;
+}
+message PushMsgReply {}
+
+//广播
+message BroadcastReq{
+    int32 op = 1;
+    bytes body = 2;
+    int32 speed = 3;
+}
+message BroadcastReply{}
+
+
+service Gate {
+    rpc PushMsg(PushMsgReq) returns (PushMsgReply);
+    rpc Broadcast(BroadcastReq) returns (BroadcastReply);
+}

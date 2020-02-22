@@ -1,0 +1,34 @@
+syntax = "proto3";
+
+package bubble.router;
+option go_package = "grpc";
+
+service router {
+    rpc Deliver(CliReq) returns(CliRep);
+}
+
+message BaseRequest {
+    bytes sessionKey = 1;
+    uint32 uin = 2;
+    bytes deviceID = 3;
+    int32 clientVersion = 4;
+    bytes deviceType = 5;
+    uint32 scene = 6;
+}
+
+message BaseResponse {
+    int32 ret = 1;
+    string errMsg = 2;
+}
+
+message CliReq {
+    BaseRequest baseRequest = 1;
+    int32 op = 2;
+    bytes body = 3;
+}
+
+message CliRep {
+    BaseResponse baseResponse = 1;
+    int32 op = 2;
+    bytes body = 3;
+}

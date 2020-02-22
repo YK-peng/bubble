@@ -1,0 +1,154 @@
+syntax = "proto3";
+
+package bubble.chatone;
+option go_package = "grpc";
+
+//聊天消息
+message NewChatMsg {
+    //消息类型
+    int32 msgType = 1;
+    //接受者
+    int32 toUserName = 2;
+    //客户端生成的MsgId,可用来去重
+    int32 clientMsgId = 3;
+    //客户端生成的Seq,可用来排序
+    int32 clientSeq = 4;
+    //客户端生成消息时间
+    int32 createTime = 5;
+    //消息内容,复杂消息,可使用XML格式化(红包、链接、个人名片、地理位置)
+    string content = 6;
+    //消息来源
+    string msgSource = 7;
+    //发送消息的设备(可用于追溯)
+    string deviceId = 8;    //"497dc05fa3719032f34fdd7fac2edfeb"
+    string osType = 9;      // "iOS10.3.2"
+    int32 platform = 10;      // "iPhone"、"Android"、"Web"
+}
+
+//返回给发起者
+message NewChatMsgAck {
+    int32 ret = 1;
+    string errMsg = 2;
+
+    //原样送回客户端,这样客户端知道是针对哪条消息的ACK
+    int64 clientMsgId = 3;
+    int32 clientSeq = 4;
+    int32 createTime = 5;
+
+    //服务器接受时间
+    int64 serverTime = 6;
+    //服务端生成的MsgId
+    int64 serverMsgId = 7;
+    //服务端生成的MsgSeq
+    int64 serverMsgSeq = 8;
+}
+
+//发送APP(小程序、从其他APP分享过来的APP链接)
+message NewAppMsg {
+    string fromUserName = 1;
+    string appId = 2;
+    int64 sdkVersion = 3;
+    string toUserName = 4;
+    int64 type = 5;
+    string content = 6;
+    int64 createTime = 7;
+    string clientMsgId = 8;
+    string thumb = 9;
+    int64 source = 10;
+    int64 remindId = 11;
+    string msgSource = 12;
+    string shareUrlOriginal = 13;
+    string shareUrlOpen = 14;
+    string jsAppId = 15;
+}
+
+//返回给发起者
+message NewAppMsgAck {
+    int32 ret = 1;
+    string errMsg = 2;
+
+    string appId = 3;
+
+    //原样送回客户端,这样客户端知道是针对哪条消息的ACK
+    int64 clientMsgId = 4;
+    int32 clientSeq = 5;
+    int32 createTime = 6;
+
+    //服务器接受时间
+    int64 serverTime = 7;
+    //服务端生成的MsgId
+    int64 serverMsgId = 8;
+    //服务端生成的MsgSeq
+    int64 serverMsgSeq = 9;
+}
+
+//拉取消息
+message SyncMsgReq {
+    int64 serverMsgSeq = 1;
+    int32 count = 2;
+}
+
+message SyncMsgRep {
+    int32 ret = 1;
+    string errMsg = 2;
+    repeated AddMsg msg = 3;
+}
+//统一的消息
+//推送给接受者的格式以及用户自己拉取下来的格式
+message AddMsg {
+    int64 msgId = 1;
+
+    string fromUserName = 2;
+    string toUserName = 3;
+
+    int64 msgType = 4;
+    string content = 5;//消息内容,复杂消息,可使用XML格式化
+    int64 status = 6;
+    int64 createTime = 9;
+    string msgSource = 10;
+
+    //如何快捷展示在这个会话框下面(会话列表中,该会话栏显示的快捷内容,比如接收到红包,在会话栏中可显示:[红包])
+    //纯文本则直接显示纯文本
+    string pushContent = 11;
+
+    int64 serverMsgId = 12;
+    int64 serverMsgSeq = 13;
+}
+
+//已读
+message MsgReadReq {
+    //一键所有已读、某会话全部已读、会话内滚动
+    int32 type = 1;
+    //对方是谁
+    int64 userName = 2;
+    //起点
+    int64 serverSeq = 3;
+    //数量
+    int32 count = 4;
+}
+
+message MsgReadRep {
+    int32 ret = 1;
+    string errMsg = 2;
+}
+
+//撤回
+message RevokeMsgReq {
+    //哪条消息
+    int64 serverMsgId = 1;
+    //对方是谁
+    int64 userName = 2;
+}
+
+message RevokeMsgRep {
+    int32 ret = 1;
+    string errMsg = 2;
+}
+
+service Chat {
+    rpc SendChatMsg(NewChatMsg) returns (NewChatMsgAck);
+    rpc SendAppMsg(NewAppMsg) returns (NewAppMsgAck);
+    rpc RevokeMsg(RevokeMsgReq) returns (RevokeMsgRep);
+    rpc ReadMsg(MsgReadReq) returns (MsgReadRep);
+    rpc GetMsgUnread(MsgReadReq) returns (MsgReadRep);
+}
